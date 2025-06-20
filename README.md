@@ -13,56 +13,48 @@ R3D-18 (ResNet3D-18) for spatiotemporal video classification
 
 Streamlit for an interactive and modern web interface
 
+
+
 The model classifies a given video as either:
 
 🟩 Non-Fight
-
 🟥 Fight
-
 💡 Features
 🎥 Upload any .mp4 video clip (dashcam/CCTV)
-
 🧠 Predicts if the scene contains violent behavior
-
 🔢 Shows prediction confidence score
-
 📜 Logs previous predictions in a CSV
-
 🖤 Fully responsive dark-themed Streamlit interface
-
 ✅ All processing is done locally, no external contacts or APIs
+
 
 🛠 Tech Stack
 PyTorch
-
 TorchVision
-
 OpenCV
-
 Streamlit
-
 ResNet3D (r3d_18)
+
+
 
 🌐 Use Case Examples
 Traffic monitoring systems
-
 Smart city surveillance
-
 Driver safety monitoring
-
 Behavior analysis from road footage
+
+
 
 🚀 Run Locally
 Clone the repository
-
 Install dependencies:
-
 bash
 Copy
 Edit
 pip install -r requirements.txt
-Run the app:
 
+
+Run the app:
 bash
 Copy
 Edit
