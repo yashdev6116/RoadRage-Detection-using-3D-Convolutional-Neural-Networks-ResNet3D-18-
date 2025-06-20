@@ -3,39 +3,37 @@
 import streamlit as st
 import torch
 import torch.nn as nn
+import tempfile
 import cv2
 import numpy as np
 import os
 import urllib.request
-import tempfile
 from torchvision import transforms
 from torchvision.models.video import r3d_18
 
-# -------------------- Streamlit UI Setup --------------------
+# -------------------- Page Configuration --------------------
 st.set_page_config(page_title="Road Rage Detection", layout="centered")
 
+# Custom CSS
 st.markdown("""
     <style>
-    body {
-        background-color: #111 !important;
-        color: #f5f5f5 !important;
+    .main {
+        background-color: #0f0f0f;
+        color: #f1f1f1;
     }
-    .stApp {
-        background-color: #111;
-        color: #f5f5f5;
-    }
-    .stButton > button {
-        background-color: #d90429;
+    .stButton>button {
         color: white;
-        font-size: 16px;
+        background-color: #d90429;
+        border: none;
         border-radius: 10px;
-        padding: 10px 24px;
+        padding: 10px 20px;
+        font-size: 16px;
     }
     .footer {
         position: fixed;
         bottom: 0;
         width: 100%;
-        background-color: #111;
+        background-color: transparent;
         text-align: center;
         color: gray;
         font-size: 14px;
@@ -44,38 +42,46 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center; color:#f5f5f5;'>🚗 Road Rage Detection using AI</h1>", unsafe_allow_html=True)
+# -------------------- Title --------------------
+st.markdown("<h1 style='text-align:center;'>🚗 Road Rage Detection using 3D CNN (ResNet3D-18)</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>Upload a road video to detect violent behavior using AI</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # -------------------- Load Model --------------------
 @st.cache_resource
 def load_model():
-    model_url = "https://drive.google.com/file/d/1wuENRVtj-9Wneg-SuMwa6DcTjrCRJ_Wt/view?usp=sharing" # 🔁 REPLACE THIS
     model_path = "road_rage_model.pth"
+    model_url = "https://drive.google.com/file/d/1wuENRVtj-9Wneg-SuMwa6DcTjrCRJ_Wt/view?usp=sharing"  # <-- UPDATE THIS
 
     if not os.path.exists(model_path):
-        with st.spinner("🔄 Downloading model..."):
-            urllib.request.urlretrieve(model_url, model_path)
+        with st.spinner("🔄 Downloading model weights..."):
+            try:
+                urllib.request.urlretrieve(model_url, model_path)
+                st.success("✅ Model downloaded.")
+            except Exception as e:
+                st.error(f"❌ Model download failed: {e}")
+                raise
 
-    model = r3d_18(pretrained=False)
-    model.fc = nn.Linear(model.fc.in_features, 2)
-    model.load_state_dict(
-        torch.load(model_path, map_location=torch.device("cpu"), weights_only=False)
-    )
-    model.eval()
-    return model
+    try:
+        model = r3d_18(pretrained=False)
+        model.fc = nn.Linear(model.fc.in_features, 2)
+        model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
+        model.eval()
+        return model
+    except Exception as e:
+        st.error(f"❌ Model loading failed: {e}")
+        raise
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = load_model().to(device)
 
-# -------------------- Preprocess Video --------------------
+# -------------------- Preprocessing --------------------
 def preprocess_video(video_path, num_frames=16):
     cap = cv2.VideoCapture(video_path)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     step = max(1, total_frames // num_frames)
-
     frames = []
+
     for i in range(0, total_frames, step):
         cap.set(cv2.CAP_PROP_POS_FRAMES, i)
         ret, frame = cap.read()
@@ -92,7 +98,7 @@ def preprocess_video(video_path, num_frames=16):
         frames.append(np.zeros((112, 112, 3), dtype=np.uint8))
 
     transform = transforms.ToTensor()
-    frames = torch.stack([transform(f) for f in frames])
+    frames = torch.stack([transform(f) for f in frames])  # (T, C, H, W)
     frames = frames.permute(1, 0, 2, 3)  # (C, T, H, W)
     return frames.unsqueeze(0).to(device)
 
@@ -106,7 +112,7 @@ def predict(video_tensor):
         label = "🟥 Fight" if pred == 1 else "🟩 Non-Fight"
         return label, confidence, pred
 
-# -------------------- Upload & UI --------------------
+# -------------------- Streamlit UI --------------------
 uploaded_file = st.file_uploader("📤 Upload a video (.mp4)", type=["mp4"])
 
 if uploaded_file is not None:
@@ -120,19 +126,18 @@ if uploaded_file is not None:
         video_tensor = preprocess_video(video_path)
         label, confidence, pred = predict(video_tensor)
 
-    # Show result
     color = "#d90429" if pred == 1 else "#2a9d8f"
     st.markdown(f"""
-    <div style="border:2px solid {color}; padding:20px; border-radius:12px; text-align:center;">
-        <h2 style="color:{color};">{label}</h2>
-        <p style="font-size:18px;">Confidence: <strong>{confidence*100:.2f}%</strong></p>
-    </div>
+        <div style="border:2px solid {color}; padding:20px; border-radius:12px; text-align:center;">
+            <h2 style="color:{color};">{label}</h2>
+            <p style="font-size:18px;">Confidence: <strong>{confidence*100:.2f}%</strong></p>
+        </div>
     """, unsafe_allow_html=True)
 
     if pred == 1:
-        st.warning("⚠️ Fight detected. You may call for help.")
+        st.warning("⚠️ Violent behavior detected! Take necessary action.")
         if st.button("📞 Call Police"):
-            st.success("🚓 Alert sent to nearby authorities (mocked). Stay safe!")
+            st.success("🚓 Alert sent to nearby authorities. Stay safe!")
     else:
         st.success("✅ No violent behavior detected.")
 
