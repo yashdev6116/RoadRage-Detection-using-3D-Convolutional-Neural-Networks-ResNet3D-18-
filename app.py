@@ -49,9 +49,10 @@ st.markdown("---")
 
 # -------------------- Load Model --------------------
 @st.cache_resource
+@st.cache_resource
 def load_model():
     model_path = "road_rage_model.pth"
-    model_url = "https://drive.google.com/file/d/1wuENRVtj-9Wneg-SuMwa6DcTjrCRJ_Wt/view?usp=sharing"  # <-- UPDATE THIS
+    model_url = "https://drive.google.com/file/d/1wuENRVtj-9Wneg-SuMwa6DcTjrCRJ_Wt/view?usp=sharing"  # Replace with correct URL
 
     if not os.path.exists(model_path):
         with st.spinner("🔄 Downloading model weights..."):
@@ -61,6 +62,21 @@ def load_model():
             except Exception as e:
                 st.error(f"❌ Model download failed: {e}")
                 raise
+
+    try:
+        model = r3d_18(pretrained=False)
+        model.fc = nn.Linear(model.fc.in_features, 2)
+        model.load_state_dict(torch.load(
+            model_path,
+            map_location=torch.device("cpu"),
+            weights_only=False  # <-- KEY FIX
+        ))
+        model.eval()
+        return model
+    except Exception as e:
+        st.error(f"❌ Model loading failed: {e}")
+        raise
+
 
     try:
         model = r3d_18(pretrained=False)
