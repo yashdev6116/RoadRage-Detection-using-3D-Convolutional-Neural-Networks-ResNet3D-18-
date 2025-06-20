@@ -51,7 +51,7 @@ st.markdown("---")
 # -------------------- Load Model --------------------
 @st.cache_resource
 def load_model():
-    model_url = "https://drive.google.com/file/d/1wuENRVtj-9Wneg-SuMwa6DcTjrCRJ_Wt/view?usp=drive_link"  # 🔁 REPLACE THIS
+    model_url = "https://drive.google.com/file/d/1wuENRVtj-9Wneg-SuMwa6DcTjrCRJ_Wt/view?usp=sharing" # 🔁 REPLACE THIS
     model_path = "road_rage_model.pth"
 
     if not os.path.exists(model_path):
