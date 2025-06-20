@@ -1,3 +1,5 @@
+# app.py
+
 import streamlit as st
 import torch
 import torch.nn as nn
@@ -15,8 +17,12 @@ st.set_page_config(page_title="Road Rage Detection", layout="centered")
 st.markdown("""
     <style>
     body {
+        background-color: #111 !important;
+        color: #f5f5f5 !important;
+    }
+    .stApp {
         background-color: #111;
-        color: #eee;
+        color: #f5f5f5;
     }
     .stButton > button {
         background-color: #d90429;
@@ -43,10 +49,9 @@ st.markdown("<p style='text-align:center;'>Upload a road video to detect violent
 st.markdown("---")
 
 # -------------------- Load Model --------------------
-
 @st.cache_resource
 def load_model():
-    model_url = "https://your-download-link.com/road_rage_model.pth"  # <-- REPLACE THIS LINK
+    model_url = "https://drive.google.com/file/d/1wuENRVtj-9Wneg-SuMwa6DcTjrCRJ_Wt/view?usp=drive_link"  # 🔁 REPLACE THIS
     model_path = "road_rage_model.pth"
 
     if not os.path.exists(model_path):
@@ -55,15 +60,16 @@ def load_model():
 
     model = r3d_18(pretrained=False)
     model.fc = nn.Linear(model.fc.in_features, 2)
-    model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
+    model.load_state_dict(
+        torch.load(model_path, map_location=torch.device("cpu"), weights_only=False)
+    )
     model.eval()
     return model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = load_model().to(device)
 
-# -------------------- Video Preprocessing --------------------
-
+# -------------------- Preprocess Video --------------------
 def preprocess_video(video_path, num_frames=16):
     cap = cv2.VideoCapture(video_path)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -91,7 +97,6 @@ def preprocess_video(video_path, num_frames=16):
     return frames.unsqueeze(0).to(device)
 
 # -------------------- Prediction --------------------
-
 def predict(video_tensor):
     with torch.no_grad():
         outputs = model(video_tensor)
@@ -101,8 +106,7 @@ def predict(video_tensor):
         label = "🟥 Fight" if pred == 1 else "🟩 Non-Fight"
         return label, confidence, pred
 
-# -------------------- Upload & Run --------------------
-
+# -------------------- Upload & UI --------------------
 uploaded_file = st.file_uploader("📤 Upload a video (.mp4)", type=["mp4"])
 
 if uploaded_file is not None:
@@ -116,6 +120,7 @@ if uploaded_file is not None:
         video_tensor = preprocess_video(video_path)
         label, confidence, pred = predict(video_tensor)
 
+    # Show result
     color = "#d90429" if pred == 1 else "#2a9d8f"
     st.markdown(f"""
     <div style="border:2px solid {color}; padding:20px; border-radius:12px; text-align:center;">
@@ -132,7 +137,6 @@ if uploaded_file is not None:
         st.success("✅ No violent behavior detected.")
 
 # -------------------- Footer --------------------
-
 st.markdown("""
     <div class="footer">
         Made with ❤️ by <strong>Yash Dev</strong>
